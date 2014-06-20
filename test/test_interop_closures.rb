@@ -1,6 +1,4 @@
-require 'minitest/autorun'
-require 'rufus-lua'
-require 'benchmark'
+
 
 describe "rufus-lua interop" do
   it 'runs tests' do
@@ -10,7 +8,7 @@ describe "rufus-lua interop" do
     s = Rufus::Lua::State.new()
     c = Cl.new(10)
 
-    [:getval].each do |name|
+    [:getval, :copyargs].each do |name|
       s.function name.to_s do |*args|
         c.send(name, *args)
       end
@@ -18,6 +16,9 @@ describe "rufus-lua interop" do
 
     result = s.eval("return getval()")
     result.must_equal 10
+
+    result = s.eval("return copyargs(1,3,4)").to_a
+    result.must_equal [1,3,4]
     s.close
   end
 
@@ -30,6 +31,10 @@ class Cl
 
   def getval
     @val
+  end
+
+  def copyargs(*args)
+    args
   end
   
 end
