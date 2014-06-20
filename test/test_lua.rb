@@ -15,6 +15,20 @@ class CheckLuaSyntax < MiniTest::Test
     s.close
   end
 
+  def test_pluto_persist_uids_are_not_picky
+    s = Rufus::Lua::State.new()
+    assert_equal(1.0, s.eval(%{
+      require "pluto"
+
+      pp = {["a"]=1}
+      up = {[1]="a"}
+      data = {c="a",d=1}
+      t = pluto.unpersist(up,pluto.persist(pp, data))
+      return t.d
+      }))
+    s.close
+  end
+
 private
   def test_syntax(path)
     source = File.read(File.expand_path(path, File.dirname(__FILE__)))
