@@ -1,5 +1,4 @@
-require "weaver_engine/version"
 
-module WeaverEngine
-  # Your code goes here...
-end
+require 'rufus-lua'
+require "weaver_engine/version"
+require "weaver_engine/fsys_data_adapter"
