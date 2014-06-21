@@ -1,65 +1,86 @@
 
-class TestNullBytesInterop < MiniTest::Test
+describe 'lua strings' do
 
 
-  def test_null_bytes_ffi_out
+  before :each do
+    @s = Rufus::Lua::State.new
+  end
+  after :each do
+    @s.close
+  end
+
+  it 'are not truncated when returned to Ruby' do
+
+    s = @s.eval('return string.char(1, 0, 0)')
+
+    s.bytes.to_a.must_equal [ 1, 0, 0 ]
+  end
+
+  it 'are not truncated when passed from Ruby to Lua and back' do
+
+    s = [ 65, 66, 0, 67, 68 ].pack('c*')
+
+    f = @s.eval(%{
+      f = function(s)
+        return { s = s, l = string.len(s) }
+      end
+      return f
+    })
+
+    f.call(s).to_h.must_equal({ 's' => s, 'l' => 5 })
+  end
+
+  it 'fetch nully strings from stack' do 
+    @s.eval("return string.char(32,0,0,32)").must_equal "\x20\x00\x00\x20"
+    @s.eval("return string.char(32,0,0,32)").length.must_equal 4
+  end
+
+  it 'verify ruby string behavior' do
+    nullstr = "\x20\x00\x00\x20"
+    nullstr.size.must_equal 4
+    nullstr.getbyte(3).must_equal 32
+  end 
+
+  it 'push nully strings to stack' do 
+    nullstr = "\x20\x00\x00\x20"
+    @s.function "get_null_string" do
+      nullstr
+    end
+    @s.eval("return string.len(get_null_string())").must_equal 4
+    @s.eval("return string.byte(get_null_string(),4)").must_equal 32
+
+    @s.eval("return (get_null_string() == string.char(32,0,0,32))").must_equal true
+    
+    str = @s.eval("return string.char(32,0,0,32)")
+    str.length.must_equal 4
+    str.must_equal nullstr
+  end
+
+  it 'roundtrips null bytes' do
+    #Here we verify roundtripping from both sides
+    #Note that length checking is just to make sure the nullcounters don't activate
     output = {}
-    s = Rufus::Lua::State.new()
-    s.function "save_out" do |k, v|
+    @s.function "save_out" do |k, v|
       output[k] = v
     end
-    s.function "pull_in" do |k|
+    @s.function "pull_in" do |k|
       output[k]
     end
-    s.eval(%{
+    @s.eval(%{
       s = string.char(32,0,32)
+      save_out("copy",s)
+      s = pull_in("copy")
       save_out("length",string.len(s))
       save_out("byte0", string.byte(s,1))
       save_out("byte1", string.byte(s,2))
       save_out("byte2", string.byte(s,3))
-      save_out("binary",s)})
-
-    assert_equal 32.0, output["byte0"], "byte0"
-    assert_equal 0.0, output["byte1"], "byte1"
-    assert_equal 32.0, output["byte2"], "byte2"
-    assert_equal output["length"], output["binary"].length.to_f, "Original vs ported length"
-
-    s.close
-  end
-
-  def test_null_bytes_fetch
-    s = Rufus::Lua::State.new()
-    str = s.eval("return string.char(32,0,0,32)")
-    byte4 = s.eval("return string.byte(string.char(32,0,0,32),4)")
-    assert_equal 4, str.length
-    assert_equal 32, byte4
-    s.close
-  end
-
-  def is_fail
-    assert (false)
-  end
-
-  def test_null_bytes_push
-    s = Rufus::Lua::State.new()
-    nullstr = "\x20\x00\x00\x20"
-    assert_equal 4, nullstr.size
-    assert_equal 32, nullstr.getbyte(3)
-    s.function "get_null_string" do
-      nullstr
-    end
-    assert_equal 4, s.eval("return string.len(get_null_string())")
-    assert_equal 32, s.eval("return string.byte(get_null_string(),4)")
-
-    assert_equal true, s.eval("return (get_null_string() == string.char(32,0,0,32))")
-    str = s.eval("return string.char(32,0,0,32)")
-    assert_equal 4, str.length
-    assert_equal nullstr, str
-    s.close
-  end
-
-  def test_ruby_bytesize
-    assert_equal 4, "\x32\x00\x00\x32".bytesize
+      save_out("copy2",s)})
+    output["copy2"].must_equal "\x20\x00\x20"
+    output["byte0"].must_equal 32.0
+    output["byte1"].must_equal 0.0
+    output["byte2"].must_equal 32.0
+    output["length"].must_equal 3
   end
 
 end
+

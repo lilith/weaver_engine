@@ -268,6 +268,10 @@ sandbox.env.back_to_caller = function()
   coroutine.yield({status='donehere'})
 end
 
+sandbox.env.await_user = function()
+  coroutine.yield({status='prompt'})
+end
+
 -- update_stat(k,v) set_stats(stats) 
 -- newpage() print(tab, template) translate(str)
 -- debuglog(str)

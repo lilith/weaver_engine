@@ -102,7 +102,7 @@ class TestCouroutinePersist < MiniTest::Test
 
     assert_equal output["length"], output["binary"].length.to_f, "Original vs ported length"
 
-    assert_equal 77, s.eval(%{return coroutine.resume(pluto.unpersist({},pull_in("binary")))})
+    assert_equal [true, 77], s.eval(%{return coroutine.resume(pluto.unpersist({},pull_in("binary")))})
 
     s.close
   end

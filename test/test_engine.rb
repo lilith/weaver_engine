@@ -8,6 +8,7 @@ module WeaverEngine
       @modules["newbie"] = %{
         function init()
             p[[Hello]]
+            await_user()
         end
       }
       @data = MemDataAdapter.new(@user_id,@branch_id, @modules)
@@ -18,7 +19,7 @@ module WeaverEngine
 
     it 'serialized_roundtrip' do 
       @engine.push("newbie", "init")
-      assert_equal 7, @data.flowstack_peek()["binary"].length
+      @data.flowstack_peek()["binary"].length.must_be(:>, 100) 
       @engine = nil
     end
 
