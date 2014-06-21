@@ -7,14 +7,6 @@ class CheckLuaSyntax < MiniTest::Test
     test_syntax('../lib/lua_engine/sandbox.lua')
   end
 
-
-  def test_sandbox_methods
-    source = File.read(File.expand_path('../lib/lua_engine/sandbox.lua', File.dirname(__FILE__)))
-    s = Rufus::Lua::State.new()
-    s.eval(source)
-    s.close
-  end
-
   def test_pluto_persist_uids_are_not_picky
     s = Rufus::Lua::State.new()
     assert_equal(1.0, s.eval(%{
@@ -33,6 +25,9 @@ private
   def test_syntax(path)
     source = File.read(File.expand_path(path, File.dirname(__FILE__)))
     s = Rufus::Lua::State.new()
+    data = WeaverEngine::MemDataAdapter.new('tester','master',{})
+    data.add_to_state(s,"host.")
+    WeaverEngine::MemDisplayAdapter.new(data).add_to_state(s,"host.")
     s.eval(source)
     s.close
   end
