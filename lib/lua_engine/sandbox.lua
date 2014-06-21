@@ -1,3 +1,4 @@
+require "pluto"
 
 -- host object members
 -- update_stat(k,v) set_stats(stats) 
@@ -36,18 +37,25 @@ function resume(user_id, input)
   local loop_count = 0
   local engine_log = {}
   local err = function(msg)
+    host.stderr(msg)
     table.insert(engine_log,msg)
   end
   repeat
     -- Resume running the flow at the top of the stack
-    local top_flow = host.flowstack_peek()
+    local top_flow_wrapper = host.flowstack_peek()
 
-    local persist_perms = nil
-    -- if type(top_flow) == "string"...
-    top_flow, persist_perms = sandbox.unpersist(top_flow.binary, user_id, top_flow.mod_id) 
-    if top_flow == nil then
+    if top_flow_wrapper == nil then
+      err("Stack is empty")
       return {success=false, reason="empty_stack", log=engine_log}
     end
+
+    host.stderr(table.show(top_flow_wrapper,"top_flow_wrapper"))
+
+    local top_flow, persist_perms = sandbox.unpersist(top_flow_wrapper.binary, user_id, 
+                                                              top_flow_wrapper.mod_id) 
+    
+    host.stderr(top_flow)
+    --host.stderr(table.show(persist_perms,"persist_perms"))
 
     if coroutine.status(top_flow.continuation) == 'dead' then
       err("Top of stack has dead coroutine: " ..top_flow.description)
@@ -65,6 +73,7 @@ function resume(user_id, input)
         ",  dead=" .. tostring(is_dead) .. ",  ".. table.show(result, "result"))
 
     if not was_started then
+      err(result)
       return {success=false, reason="runtime_error", log=engine_log}
     end
     if was_started and is_dead then
@@ -86,7 +95,7 @@ function resume(user_id, input)
         err("Success, saving updated flow...")
         local updated_flow = sandbox.persist(top_flow, persist_perms) 
         host.flowstack_pop()
-        host.flowstack_push(updated_flow)
+        host.flowstack_push({binary=updated_flow, mod_id= top_flow.mod_id})
         return {success=true, status="prompt"}
       elseif key == 'donehere' then
         host.flowstack_pop()
@@ -112,6 +121,7 @@ function push(user_id, mod_id, method_name, err)
   local log = {}
   if not err then
     err = function(msg)
+    host.stderr(msg)
       table.insert(log,msg)
     end
   end
@@ -119,9 +129,11 @@ function push(user_id, mod_id, method_name, err)
   if new_flow == nil then
     return {success=false, reason="start_failed", log=engine_log}
   else
-    err("New flow pushed to stack")
-    new_flow = sandbox.persist(new_flow, persist_perms)
-    host.flowstack_push({binary=new_flow, mod_id=mod_id})
+    
+    local new_flow_binary = sandbox.persist(new_flow, persist_perms)
+    local new_flow_wrapper = {binary=new_flow_binary, mod_id=mod_id}
+    host.flowstack_push(new_flow_wrapper)
+    --err("New flow pushed to stack: " .. table.show(new_flow_wrapper,"new_flow_wrapper"))
     return {success=true}
   end
 end 
@@ -275,11 +287,12 @@ sandbox.persistable = {[math.pi] = math.pi, [math.huge] = math.huge}
 sandbox.build_environment = function(user_id, mod_id)
   local env =  deepcopy(sandbox.env)
   env["_G"] = env  
-  
+  env.m = {}
   env.m.initial_method = method_name
+  env.m.info = {}
   env.m.info.id = mod_id
 
-
+  env.p = host.print
   env.newpage = host.newpage
   env.checkpoint = host.checkpoint
   env.m = sandbox.create_m(user_id,mod_id)
@@ -289,8 +302,8 @@ sandbox.build_environment = function(user_id, mod_id)
   local err = function(msg)
     error(msg)
   end
-  local persist_perms = table.invert(table.flatten_to_functions_array(sandbox.persistable,err))
-  return env
+  local persist_perms = table.invert(table.flatten_to_functions_array(env,sandbox.persistable,err))
+  return env, persist_perms
 end
 
 sandbox.unpersist = function(data, user_id,mod_id)
@@ -299,10 +312,13 @@ sandbox.unpersist = function(data, user_id,mod_id)
   end
   local perms = table.flatten_to_functions_array(sandbox.build_environment(user_id,mod_id), sandbox.persistable,err)
 
-  returnpluto.unpersist(perms,data)
+  local result = pluto.unpersist(perms,data)
+  return result, perms
 end
 
-
+sandbox.persist = function(data, persist_perms)
+  return pluto.persist(persist_perms,data)
+end 
 -- table.invert, table.flatten_to_functions_array
 -- deepcopy(object)
 
@@ -368,4 +384,117 @@ function table.invert(tab)
     t[v] = k
   end
   return t
+end
+
+
+
+
+--[[
+   Author: Julio Manuel Fernandez-Diaz
+   Date:   January 12, 2007
+   (For Lua 5.1)
+   
+   Modified slightly by RiciLake to avoid the unnecessary table traversal in tablecount()
+
+   Formats tables with cycles recursively to any depth.
+   The output is returned as a string.
+   References to other tables are shown as values.
+   Self references are indicated.
+
+   The string returned is "Lua code", which can be procesed
+   (in the case in which indent is composed by spaces or "--").
+   Userdata and function keys and values are shown as strings,
+   which logically are exactly not equivalent to the original code.
+
+   This routine can serve for pretty formating tables with
+   proper indentations, apart from printing them:
+
+      print(table.show(t, "t"))   -- a typical use
+   
+   Heavily based on "Saving tables with cycles", PIL2, p. 113.
+
+   Arguments:
+      t is the table.
+      name is the name of the table (optional)
+      indent is a first indentation (optional).
+--]]
+function table.show(t, name, indent)
+   local cart     -- a container
+   local autoref  -- for self references
+
+   --[[ counts the number of elements in a table
+   local function tablecount(t)
+      local n = 0
+      for _, _ in pairs(t) do n = n+1 end
+      return n
+   end
+   ]]
+   -- (RiciLake) returns true if the table is empty
+   local function isemptytable(t) return next(t) == nil end
+
+   local function basicSerialize (o)
+      local so = tostring(o)
+      if type(o) == "function" then
+         if (debug == nil or debug.getinfo == nil) then
+          return string.format("%q", so)
+         else
+           local info = debug.getinfo(o, "S")
+           -- info.name is nil because o is not a calling level
+           if info.what == "C" then
+              return string.format("%q", so .. ", C function")
+           else 
+              -- the information is defined through lines
+              return string.format("%q", so .. ", defined in (" ..
+                  info.linedefined .. "-" .. info.lastlinedefined ..
+                  ")" .. info.source)
+           end
+        end
+      elseif type(o) == "number" or type(o) == "boolean" then
+         return so
+      else
+         return string.format("%q", so)
+      end
+   end
+
+   local function addtocart (value, name, indent, saved, field)
+      indent = indent or ""
+      saved = saved or {}
+      field = field or name
+
+      cart = cart .. indent .. field
+
+      if type(value) ~= "table" then
+         cart = cart .. " = " .. basicSerialize(value) .. ";\n"
+      else
+         if saved[value] then
+            cart = cart .. " = {}; -- " .. saved[value] 
+                        .. " (self reference)\n"
+            autoref = autoref ..  name .. " = " .. saved[value] .. ";\n"
+         else
+            saved[value] = name
+            --if tablecount(value) == 0 then
+            if isemptytable(value) then
+               cart = cart .. " = {};\n"
+            else
+               cart = cart .. " = {\n"
+               for k, v in pairs(value) do
+                  k = basicSerialize(k)
+                  local fname = string.format("%s[%s]", name, k)
+                  field = string.format("[%s]", k)
+                  -- three spaces between levels
+                  addtocart(v, fname, indent .. "   ", saved, field)
+               end
+               cart = cart .. indent .. "};\n"
+            end
+         end
+      end
+   end
+
+   name = name or "__unnamed__"
+   if type(t) ~= "table" then
+      return name .. " = " .. basicSerialize(t)
+   end
+   cart, autoref = "", ""
+   addtocart(t, name, indent)
+   return cart .. autoref
 end

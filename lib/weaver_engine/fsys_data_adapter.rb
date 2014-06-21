@@ -1,19 +1,13 @@
 module WeaverEngine
-  class FsysDataAdapter
+  class FsysDataAdapter < DataAdapterBase
 
     def initialize(user_id,branch_id, data_dir, module_dir)
-      @user = @user_id
-      @branch = @branch_id
+      @user = user_id
+      @branch = branch_id
       @data_dir = data_dir
       @module_dir = module_dir
     end
 
-    def user_id
-      @user_id
-    end
-    def branch_id
-      @branch_id
-    end
 
  
     def get_mod_blob(mod_id)
@@ -59,31 +53,9 @@ module WeaverEngine
       end
     end
 
-    def self.lua_to_ruby(v)
-      if v.is_a?(Rufus::Lua::Table)
-        v = v.to_ruby
-      end
-      if v.is_a?(Array)
-        v = v.map{|p|FsysDataAdapter.lua_to_ruby(p)}
-      elsif v.is_a?(Hash)
-        v = Hash[v.to_a.map{|p|FsysDataAdapter.lua_to_ruby(p)}]
-      end
-      v
-    end
-
-    def add_to_state(state, prefix)
-      [:get_mod_blob, :get_value_by, :set_value_by, 
-      :flowstack_push, :flowstack_pop, :flowstack_peek].each do |name|
-        state.function "#{prefix}#{name}" do |*args|
-          args = FsysDataAdapter.lua_to_ruby(args)
-          self.send(name,*args)
-        end
-      end
-    end
-
   
     def calc_path(mod_id = nil, user_id = nil, partition = nil)
-      io.path.join(@data_dir,"#{mod_id || 'allmods'},#{user_id || 'allusers'},#{parition || default}.data")
+      io.path.join(@data_dir,"#{mod_id || 'allmods'},#{user_id || 'allusers'},#{partition || 'default'},#{branch_id || 'master'}.data")
     end
 
     def load_store(mod_id = nil, user_id = nil, partition = nil)

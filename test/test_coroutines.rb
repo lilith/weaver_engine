@@ -8,7 +8,6 @@ class TestCouroutinePersist < MiniTest::Test
     s = Rufus::Lua::State.new()
 
     result = s.eval(luatest)
-    #STDERR << "RESULT: #{result.inspect}"
 
     assert_equal(5, result["a"][5])
     assert_equal(6, result["b"][1])
@@ -70,6 +69,88 @@ class TestCouroutinePersist < MiniTest::Test
     results = WeaverEngine::FsysDataAdapter.lua_to_ruby(s.eval(lua))
 
     assert_equal([false, "cannot resume dead coroutine"], results)
+    s.close
+  end
+
+  def test_persisted_coroutine
+    output = {}
+    s = Rufus::Lua::State.new()
+    s.function "save_out" do |k, v|
+      output[k] = v
+    end
+    s.function "pull_in" do |k|
+      output[k]
+    end
+    s.eval(%{
+      require "pluto"
+      function sequence() 
+        coroutine.yield(77)
+      end
+      co = coroutine.create(sequence)
+      serialized = pluto.persist({},co)
+      save_out("length",string.len(serialized))
+      save_out("byte0", string.byte(serialized,1))
+      save_out("byte1", string.byte(serialized,2))
+      save_out("byte2", string.byte(serialized,3))
+      save_out("binary",serialized)})
+
+    #assert_equal 312.0, output["length"] 
+    
+    assert_equal 1.0, output["byte0"], "byte0"
+    assert_equal 0.0, output["byte1"], "byte1"
+    assert_equal 0.0, output["byte2"], "byte2"
+
+    assert_equal output["length"], output["binary"].length.to_f, "Original vs ported length"
+
+    assert_equal 77, s.eval(%{return coroutine.resume(pluto.unpersist({},pull_in("binary")))})
+
+    s.close
+  end
+
+  def test_null_bytes_ffi_out
+    output = {}
+    s = Rufus::Lua::State.new()
+    s.function "save_out" do |k, v|
+      output[k] = v
+    end
+    s.function "pull_in" do |k|
+      output[k]
+    end
+    s.eval(%{
+      s = string.char(1,0,0)
+      save_out("length",string.len(s))
+      save_out("byte0", string.byte(s,1))
+      save_out("byte1", string.byte(s,2))
+      save_out("byte2", string.byte(s,3))
+      save_out("binary",s)})
+
+    assert_equal 1.0, output["byte0"], "byte0"
+    assert_equal 0, output["byte1"], "byte1"
+    assert_equal 0, output["byte2"], "byte2"
+    assert_equal output["length"], output["binary"].length.to_f, "Original vs ported length"
+
+    s.close
+  end
+
+  def test_null_bytes_returned
+    s = Rufus::Lua::State.new()
+    str = s.eval("return string.char(1,0,0)")
+    assert_equal 3, str.length
+    assert_equal "\x01", str[0], "byte0"
+    assert_equal "\x00", str[1], "byte1"
+    assert_equal "\x00", str[2]
+    s.close
+  end
+
+  def test_null_bytes_roundtrip
+    s = Rufus::Lua::State.new()
+    nullstr = "\x01\x00\x00\x01"
+    s.function "get_null_string" do
+      nullstr
+    end
+    str = s.eval("return get_null_string()")
+    assert_equal 4, str.length
+    assert_equal nullstr, str
     s.close
   end
 
