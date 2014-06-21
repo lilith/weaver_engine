@@ -8,7 +8,7 @@ module WeaverEngine
       @modules["newbie"] = %{
         function init()
             p[[Hello]]
-            await_user()
+            coroutine.yield({status='prompt'})
         end
       }
       @data = MemDataAdapter.new(@user_id,@branch_id, @modules)
