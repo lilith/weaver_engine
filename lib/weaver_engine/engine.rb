@@ -106,7 +106,7 @@ module WeaverEngine
     end
 
     def run_lua_function(name, *params)
-      STDERR << "Running #{name}(" + params.join(',') + ")"
+      #STDERR << "Running #{name}(" + params.join(',') + ")"
       run_lua do |s|
         s.function "host.get_run_param" do |ix|
           params[ix]
@@ -117,7 +117,7 @@ module WeaverEngine
                     inner_xpcall_target = function() 
                       return } + "#{name}(#{params_list})" + %{
                     end 
-                    local err = function(e) return e ..debug.traceback() end
+                    local err = function(e) return e ..'\\n'..debug.traceback() end
                     local flag, result = xpcall(inner_xpcall_target,err)
                     if flag then
                       return result

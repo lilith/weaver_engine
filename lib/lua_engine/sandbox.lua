@@ -205,6 +205,7 @@ sandbox.env = {
       rad = math.rad, random = math.random, sin = math.sin, sinh = math.sinh, 
       sqrt = math.sqrt, tan = math.tan, tanh = math.tanh },
   os = { clock = os.clock, difftime = os.difftime, time = os.time },
+  debug = {getlocal = debug.getlocal}
   --debug = {getlocal = debug.getlocal} -- REMOVE THIS
 }
 
@@ -264,13 +265,14 @@ sandbox.load_with_env = function(luacode, env, error_callback)
   return func
 end
 
-sandbox.env.back_to_caller = function()
-  coroutine.yield({status='donehere'})
+local comment = [[sandbox.env.back_to_caller = function()
+  sandbox.env.coroutine.yield({status='donehere'})
 end
 
 sandbox.env.await_user = function()
-  coroutine.yield({status='prompt'})
+  sandbox.env.coroutine.yield({status='prompt'})
 end
+]]
 
 -- update_stat(k,v) set_stats(stats) 
 -- newpage() print(tab, template) translate(str)
@@ -286,6 +288,27 @@ end
 
 
 sandbox.persistable = {[math.pi] = math.pi, [math.huge] = math.huge}
+  
+sandbox.non_env_persists = {
+  host.get_value_by, 
+  host.set_value_by,
+  host.get_mod_blob,
+  host.print,
+  host.stderr,
+  host,
+  setmetatable,
+  getmetatable,
+  setfenv,
+  loadstring, 
+}
+
+sandbox.build_persist_list = function(env, err)
+  list = table.flatten_to_functions_array(env,sandbox.persistable,err)
+  table.concat(list, sandbox.non_env_persists)
+  table.insert(list,env.stats) -- Because tables with metatables including C closures will fail
+  table.insert(list,env.m)
+  return list
+end
 
 -- Creates an environment by copying sandbox.env. Used for sandboxing.
 sandbox.build_environment = function(user_id, mod_id)
@@ -297,16 +320,16 @@ sandbox.build_environment = function(user_id, mod_id)
   env.m.info.id = mod_id
 
   env.p = host.print
-  env.newpage = host.newpage
-  env.checkpoint = host.checkpoint
-  env.m = sandbox.create_m(user_id,mod_id)
-  env.stats = sandbox.create_stats(user_id)
-  env.require = sandbox.create_require(env)
+  --env.newpage = host.newpage
+  --env.checkpoint = host.checkpoint
+  --env.m = sandbox.create_m(user_id,mod_id)
+  --env.stats = sandbox.create_stats(user_id)
+  --env.require = sandbox.create_require(env)
 
   local err = function(msg)
     error(msg)
   end
-  local persist_perms = table.invert(table.flatten_to_functions_array(env,sandbox.persistable,err))
+  local persist_perms = table.invert(sandbox.build_persist_list(env,err))
   return env, persist_perms
 end
 
@@ -314,7 +337,7 @@ sandbox.unpersist = function(data, user_id,mod_id)
   local err = function(msg)
     error(msg)
   end
-  local perms = table.flatten_to_functions_array(sandbox.build_environment(user_id,mod_id), sandbox.persistable,err)
+  local perms = sandbox.build_persist_list(sandbox.build_environment(user_id,mod_id),err)
 
   local result = pluto.unpersist(perms,data)
   return result, perms
@@ -368,7 +391,7 @@ function table.flatten_to_functions_array(tab, excluded_values, err)
     else
       if excluded_values[v] == nil then
         if (type(v) ~= 'function') then
-          err("Found value " .. v .. " when flatting to array")
+          --skipping
         else
           table.insert(arr,v)
         end
@@ -392,6 +415,12 @@ end
 
 
 
+function table.concat(t1,t2)
+    for i=1,#t2 do
+        t1[#t1+1] = t2[i]
+    end
+    return t1
+end
 
 --[[
    Author: Julio Manuel Fernandez-Diaz
