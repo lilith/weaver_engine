@@ -127,7 +127,7 @@ module WeaverEngine
                   end
                   return names.invoke_lua_xpcall()
                 }
-        result = s.eval(source)
+        result = s.eval(source, nil, "/invoke_lua_xpcall", 0)
         raise LuaEngineError.new("host_runtime_error", ["nil result from #{name}"]) if result.nil?
         raise LuaEngineError.new(result["reason"], result["log"]) unless result.nil? || result["success"]
         result
@@ -156,7 +156,7 @@ module WeaverEngine
       s.function "host.stderr" do |message|
         $stderr.puts message
       end
-      s.eval(get_sandbox_code())
+      s.eval(get_sandbox_code(), nil, 'sandbox.lua', 0)
       block.call(s)
       s.close
     end
