@@ -24,16 +24,16 @@ module WeaverEngine
     end
 
     it 'can_initialize' do
-      skip("Our sandbox isn't working yet")
+      #skip("Our sandbox isn't working yet")
       response = @engine.request
-      assert_equal 200, response[:status]
+      assert_equal 200, response[:status], response[:error]
       @engine = nil
     end
 
     it 'test_can_print' do
-      skip("Our sandbox isn't working yet")
+      #skip("Our sandbox isn't working yet")
       response = @engine.request
-      assert_equal ["Hello"], response[:prose]
+      assert_equal ["Hello"], response[:prose], response[:error]
       @engine = nil
     end
 

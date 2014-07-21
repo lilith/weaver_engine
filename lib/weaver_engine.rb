@@ -1,4 +1,4 @@
-
+#ENV['LUA_LIB'] = "~/Documents/nathanael/weaver-projects/eris/src/liblua.dylib"
 require 'rufus-lua'
 require "weaver_engine/version"
 require "weaver_engine/lua_engine_error"

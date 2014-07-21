@@ -62,6 +62,11 @@ module WeaverEngine
       @data[:prose] = error.all_info
       @data[:choices] = checkpoints.map{|c| {id: c[:key], label: c[:title]}} #todo add time ago.
       @data[:status] = 500
+      estr = error.all_info.join("\n")
+      estr.gsub!(/\[string "([^"\]]+?)(:0)?"\]/, "\\1")
+      estr.gsub!(/\n\s*\/invoke_lua_xpcall:\d: in function <\/invoke_lua_xpcall:\d>\n*/,"\n")
+      @data[:error] = estr
+ 
     end
 
     def print(var_table, template)
