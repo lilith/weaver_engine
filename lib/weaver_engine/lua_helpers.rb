@@ -31,7 +31,7 @@ module WeaverEngine
           rescue Exception => e 
             STDERR << "\nError calling C(Ruby) function #{signature}:\n #{e}\n"
           else
-            STDERR << "\n#{prefix}#{signature}) invoked, returned #{result.inspect[0..30]}...\n"
+            #STDERR << "\n#{prefix}#{signature}) invoked, returned #{result.inspect[0..30]}...\n"
           end
           result
         end
@@ -42,8 +42,20 @@ module WeaverEngine
     def to_lua_str(v)
       return "nil" if v.nil?
       return escape_lua_string(v.to_s) if v.is_a?(String) || v.is_a?(Symbol)
-      return v.to_s if v.is_a?(Boolean) || v.is_a?(Numeric)
-      raise "Cannot convert serialize ruby value to lua string #{v.inspect}"
+      return v.to_s if !!v == v || v.is_a?(Numeric)
+      v = Hash[v.each_with_index.map { |v, ix| [ix, v] }] if v.is_a?(Array) 
+      if v.is_a?(Hash)
+        result = "{"
+        v.each do |k,v|
+          k = to_lua_str(k) if (k.is_a?(String) || k.is_a?(Symbol))
+          k = "nil" if k.nil?
+          k = "[#{k.to_s}]" if  !!k == k || k.is_a?(Numeric)
+          raise "Invalid table key #{k.inspect}" unless k.is_a(String)
+          result += "#{k} = #{to_lua_str(v)}, "
+        end
+        return result + "}"
+      end 
+      raise "Cannot serialize ruby value to lua syntax #{v.inspect}"
     end
 
     def escape_lua_string(str)
