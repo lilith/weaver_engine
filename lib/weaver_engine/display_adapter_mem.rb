@@ -69,7 +69,7 @@ module WeaverEngine
  
     end
 
-    def print(var_table, template)
+    def print(var_table, template = nil)
       if template.nil? && var_table.is_a?(String)
         template = var_table
         var_table = nil
@@ -93,8 +93,14 @@ module WeaverEngine
       [:update_stat, :set_stats, :newpage, 
       :print, :translate, :debuglog, :add_choice, :set_choices].each do |name|
         state.function "#{prefix}#{name}" do |*args|
-          args = FsysDataAdapter.lua_to_ruby(args)
-          self.send(name,*args)
+          begin
+            STDERR << "\n#{prefix}#{name}(#{args.join(',')}) invoked\n"
+            args = FsysDataAdapter.lua_to_ruby(args)
+            result = self.send(name,*args)
+            STDERR << "\nResult #{result.inspect}\n"
+          rescue Exception => e 
+            STDERR << "\nError in C(Ruby) function: #{e}"
+          end
         end
       end
     end
