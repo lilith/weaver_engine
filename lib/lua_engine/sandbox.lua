@@ -49,12 +49,12 @@ function resume(user_id, input)
       return {success=false, reason="empty_stack", log=engine_log}
     end
 
-    host.stderr(table.show(top_flow_wrapper,"top_flow_wrapper"))
+    --host.stderr(table.show(top_flow_wrapper,"top_flow_wrapper"))
 
     local top_flow, persist_perms = sandbox.unpersist(top_flow_wrapper.binary, user_id, 
                                                               top_flow_wrapper.mod_id) 
     
-    host.stderr(top_flow)
+    --host.stderr(top_flow)
     --host.stderr(table.show(persist_perms,"persist_perms"))
 
     if coroutine.status(top_flow.continuation) == 'dead' then
@@ -303,11 +303,13 @@ sandbox.non_env_persists = {
 }
 
 sandbox.build_persist_list = function(env, err)
-  list = table.flatten_to_functions_array(env,sandbox.persistable,err)
-  table.concat(list, sandbox.non_env_persists)
+  local list = table.flatten_to_functions_array(env,sandbox.persistable,err)
+  for item,_ in pairs(sandbox.non_env_persists) do
+    table.insert(list, item)
+  end
   table.insert(list,env.stats) -- Because tables with metatables including C closures will fail
   table.insert(list,env.m)
-  return list
+  return table.invert(list)
 end
 
 -- Creates an environment by copying sandbox.env. Used for sandboxing.
@@ -320,6 +322,7 @@ sandbox.build_environment = function(user_id, mod_id)
   env.m.info.id = mod_id
 
   env.p = host.print
+
   --env.newpage = host.newpage
   --env.checkpoint = host.checkpoint
   --env.m = sandbox.create_m(user_id,mod_id)
@@ -329,7 +332,7 @@ sandbox.build_environment = function(user_id, mod_id)
   local err = function(msg)
     error(msg)
   end
-  local persist_perms = table.invert(sandbox.build_persist_list(env,err))
+  local persist_perms = sandbox.build_persist_list(env,err)
   return env, persist_perms
 end
 
@@ -337,14 +340,20 @@ sandbox.unpersist = function(data, user_id,mod_id)
   local err = function(msg)
     error(msg)
   end
-  local perms = sandbox.build_persist_list(sandbox.build_environment(user_id,mod_id),err)
+  local env, perms = sandbox.build_environment(user_id,mod_id)
 
-  local result = pluto.unpersist(perms,data)
+  local result = pluto.unpersist(table.invert(perms),data)
   return result, perms
 end
 
 sandbox.persist = function(data, persist_perms)
-  return pluto.persist(persist_perms,data)
+  local persistit = function() return pluto.persist(persist_perms,data) end
+  local status, err = pcall(persistit)
+  if status then
+    return(err) 
+  else
+    error(err.."\n\n"..table.show(data, "data") .."\n\n"..table.show(persist_perms, "persist_perms").."\n\n"..table.show(_G, "_G"))
+  end 
 end 
 -- table.invert, table.flatten_to_functions_array
 -- deepcopy(object)
