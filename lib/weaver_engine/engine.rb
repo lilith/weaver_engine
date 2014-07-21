@@ -1,6 +1,7 @@
 module WeaverEngine
 
   class Engine
+    include LuaHelpersMixin
 
     attr_accessor :user_id, :branch_id, :data, :display
     def initialize(user_id, branch_id, data_adapter, display_adapter)
@@ -111,19 +112,6 @@ module WeaverEngine
         result.to_ruby
       end
     end
-
-    def to_lua_str(v)
-      return "nil" if v.nil?
-      return escape_lua_string(v.to_s) if v.is_a?(String) || v.is_a?(Symbol)
-      return v.to_s if v.is_a?(Boolean) || v.is_a?(Numeric)
-      raise "Cannot convert serialize ruby value to lua string #{v.inspect}"
-    end
-
-    def escape_lua_string(str)
-      escapes = { "\a" => "\\a", "\b" => "\\b", "\f" =>"\\f",
-          "\n" => "\\n", "\r" => "\\r", "\v" => "\\v", "\"" => "\\\"", "\'" => "\\'", "[" => "\[", "]" => "\]"}
-      "\"" + str.split("").map{|c| escapes[c] || c}.join("") + "\""
-    end 
 
 
     def run_lua_function(name, *params)

@@ -24,7 +24,7 @@ module WeaverEngine
     end
 
     def all_info
-      ["#{reason} - #{explanation}"] + DataAdapterBase.lua_to_ruby(log)
+      ["#{reason} - #{explanation}"] + DataAdapterBase.lua_to_ruby(log || [])
     end
   end
 end

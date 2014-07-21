@@ -32,10 +32,12 @@ module WeaverEngine
       flowstack_full.last
     end
     def flowstack_pop()
+      result = "NORESULT"
       flowstack_edit do |store|
         result = store.pop
         store
       end
+      raise "Fault" if result == "NORESULT"
       result
     end
     def flowstack_push(v)
@@ -81,6 +83,11 @@ module WeaverEngine
     def edit_store(mod_id = nil, user_id = nil, partition = nil, &block)
       key = get_key(mod_id,user_id,partition)
       @data[key] = block.call(@data[key] || {})
+    end
+
+    def add_to_state(state,prefix)
+      add_methods_to_state state, prefix, [:get_mod_blob, :get_value_by, :set_value_by, 
+      :flowstack_push, :flowstack_pop, :flowstack_peek]
     end
   end
 end

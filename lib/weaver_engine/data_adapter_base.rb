@@ -1,5 +1,6 @@
 module WeaverEngine
-  class DataAdapterBase 
+  class DataAdapterBase
+    include LuaHelpersMixin 
 
     attr_reader :user_id, :branch_id
 
@@ -24,28 +25,13 @@ module WeaverEngine
     def flowstack_push(v)
     end
 
-
-
-    def self.lua_to_ruby(v)
-      if v.is_a?(Rufus::Lua::Table)
-        v = v.to_ruby
-      end
-      if v.is_a?(Array)
-        v = v.map{|p|DataAdapterBase.lua_to_ruby(p)}
-      elsif v.is_a?(Hash)
-        v = Hash[v.to_a.map{|p|DataAdapterBase.lua_to_ruby(p)}]
-      end
-      v
+    def add_to_state(state,prefix)
+      add_methods_to_state state, prefix, [:get_mod_blob, :get_value_by, :set_value_by, 
+      :flowstack_push, :flowstack_pop, :flowstack_peek]
     end
 
-    def add_to_state(state, prefix)
-      [:get_mod_blob, :get_value_by, :set_value_by, 
-      :flowstack_push, :flowstack_pop, :flowstack_peek].each do |name|
-        state.function "#{prefix}#{name}" do |*args|
-          args = DataAdapterBase.lua_to_ruby(args)
-          self.send(name,*args)
-        end
-      end
+    def self.lua_to_ruby(v)
+      LuaHelpersMixin.lua_to_ruby(v)
     end
   end
 end

@@ -1,6 +1,6 @@
 module WeaverEngine
   class MemDisplayAdapter
-
+    include LuaHelpersMixin
     
     def initialize(data_adapter)
       @data_adapter = data_adapter
@@ -88,21 +88,11 @@ module WeaverEngine
     #inventory? 
 
     # For ajax, we eventually would want to diff the tree, i.e compare current against saved.
-
-    def add_to_state(state, prefix)
-      [:update_stat, :set_stats, :newpage, 
-      :print, :translate, :debuglog, :add_choice, :set_choices].each do |name|
-        state.function "#{prefix}#{name}" do |*args|
-          begin
-            STDERR << "\n#{prefix}#{name}(#{args.join(',')}) invoked\n"
-            args = FsysDataAdapter.lua_to_ruby(args)
-            result = self.send(name,*args)
-            STDERR << "\nResult #{result.inspect}\n"
-          rescue Exception => e 
-            STDERR << "\nError in C(Ruby) function: #{e}"
-          end
-        end
-      end
+    def add_to_state(state,prefix)
+      add_methods_to_state state, prefix, [:update_stat, :set_stats, :newpage, 
+      :print, :translate, :debuglog, :add_choice, :set_choices]
     end
+
+    
   end
 end
