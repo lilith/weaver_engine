@@ -1,6 +1,14 @@
-# WeaverEngine
+# WeaveEngine
 
-TODO: Write a gem description
+For building MMORPG games which
+
+* Support collaborative editing of the universe
+* Are primarily text-based and story-centric
+* Can be played with simple controls, such as navigation and action 'choices'
+* Are mobile-friendly
+* Are highly accessible
+
+[Read more about the genre](genre.md)
 
 ## Installation
 
