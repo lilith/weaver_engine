@@ -3,14 +3,17 @@ module WeaverEngine
   class Engine
     include LuaHelpersMixin
 
-    attr_accessor :user_id, :branch_id, :data, :display
+    attr_accessor :user_id, :branch_id, :data, :display, :init_module_id, :init_method_name
     def initialize(user_id, branch_id, data_adapter, display_adapter)
       @user_id = user_id
       @branch_id = branch_id
       @data = data_adapter
       @display = display_adapter
       @last_input = nil
+      @init_module_id = "newbie"
+      @init_method_name = "init"
     end
+
 
 
     def save_checkpoint(title)
@@ -37,7 +40,7 @@ module WeaverEngine
         data.flowstack_edit do |stack|
           []
         end
-        push("newbie", "init")
+        push(@init_module_id, @init_method_name)
         nil
       else
 
