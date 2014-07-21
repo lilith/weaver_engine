@@ -120,13 +120,13 @@ function push(user_id, mod_id, method_name, err)
   local log = {}
   if not err then
     err = function(msg)
-    host.stderr(msg)
+      host.stderr(msg)
       table.insert(log,msg)
     end
   end
   local new_flow, persist_perms = build_coroutine(user_id, mod_id, method_name, err)
   if new_flow == nil then
-    return {success=false, reason="start_failed", log=engine_log}
+    return {success=false, reason="start_failed", log=log}
   else
     
     local new_flow_binary = sandbox.persist(new_flow, persist_perms)
@@ -149,7 +149,7 @@ function build_coroutine(user_id, mod_id, method_name, err)
   local env, persist_perms = sandbox.build_environment(user_id,mod_id)
 
   -- Load the module
-  local mod = sandbox.load_with_env(mod_source,env,err)
+  local mod = sandbox.load_with_env(mod_source,mod_id, env,err)
   if (mod == nil) then return nil end
   
   -- Execute the module to populate the environment
@@ -254,8 +254,8 @@ sandbox.create_require = function(modulename, env)
 end
 
 -- Loads and parses the specified file into a function, then sets its environment to 'env'. Errors go to the 'err' function.
-sandbox.load_with_env = function(luacode, env, error_callback)
-  local func, message = loadstring(luacode)
+sandbox.load_with_env = function(luacode, chunkname, env, error_callback)
+  local func, message = loadstring(luacode, chunkname)
   if (func == nil) then
     error_callback(message)
   else

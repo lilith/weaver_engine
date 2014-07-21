@@ -31,6 +31,7 @@ module WeaverEngine
           goto("gotos", "init")
         end
       }
+      @modules["badsyntax"] = "[["
       @data = MemDataAdapter.new(@user_id,@branch_id, @modules)
       @display = MemDisplayAdapter.new(@data)
 
@@ -43,26 +44,26 @@ module WeaverEngine
       @engine = nil
     end
 
-    it 'can_initialize' do
+    it 'can initialize' do
       response = @engine.request
       assert_equal 200, response[:status], response[:error]
       @engine = nil
     end
 
-    it 'test_can_print' do
+    it 'can print' do
       response = @engine.request
       assert_equal ["Hello"], response[:prose], response[:error]
       @engine = nil
     end
 
-    it 'test_can_resume' do
+    it 'can resume' do
       response = @engine.request
       response = @engine.request({})
       assert_equal ["Hello", "You are in a room"], response[:prose], response[:error]
       @engine = nil
     end
 
-    it 'test_can_goto' do
+    it 'can goto' do
       @engine.init_module_id = "gotos"
       response = @engine.request
       assert_equal ["Init Room"], response[:prose], response[:error]
@@ -73,7 +74,11 @@ module WeaverEngine
       @engine = nil
     end
 
-
+    it 'has detailed module syntax errors' do
+      @engine.init_module_id = "badsyntax"
+      response = @engine.request
+      assert response[:error].include?("badsyntax:1: unfinished long string near '<eof>'"), response[:error]
+    end
   end
 
 
