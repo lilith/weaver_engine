@@ -37,7 +37,6 @@ function resume(user_id, input)
   local loop_count = 0
   local engine_log = {}
   local err = function(msg)
-    host.stderr(msg)
     table.insert(engine_log,msg)
   end
   repeat
@@ -163,7 +162,7 @@ function build_coroutine(user_id, mod_id, method_name, err)
   -- Look up the function from 'name'
   local initial_func = env[method_name]
   if (initial_func == nil) then
-    err ("Couldn't find function " .. method_name .. " in module " .. mod_id)
+    err("Couldn't find function " .. method_name .. " in module " .. mod_id)
     return nil
   end
 
@@ -322,12 +321,14 @@ sandbox.build_environment = function(user_id, mod_id)
   env.m.info.id = mod_id
 
   env.p = host.print
-
-  --env.newpage = host.newpage
-  --env.checkpoint = host.checkpoint
-  --env.m = sandbox.create_m(user_id,mod_id)
-  --env.stats = sandbox.create_stats(user_id)
-  --env.require = sandbox.create_require(env)
+  env.goto = function(moduleid, methodname)
+    coroutine.yield({status="goto", mod_id = moduleid, method_name = methodname})
+  end
+  env.newpage = host.newpage
+  env.checkpoint = host.checkpoint
+  env.m = sandbox.create_m(user_id,mod_id)
+  env.stats = sandbox.create_stats(user_id)
+  env.require = sandbox.create_require(env)
 
   local err = function(msg)
     error(msg)
