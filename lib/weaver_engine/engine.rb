@@ -105,19 +105,37 @@ module WeaverEngine
       File.read(File.expand_path('../lua_engine/sandbox.lua', File.dirname(__FILE__)))
     end
 
+    def run_lua_function_direct(name, *params)
+      run_lua do |s|
+        result = s.eval("return #{name}(" + params.map{|v| to_lua_str(v)}.join(",") + ")",nil, "calling #{name} from ruby");
+        result.to_ruby
+      end
+    end
+
+    def to_lua_str(v)
+      return "nil" if v.nil?
+      return escape_lua_string(v.to_s) if v.is_a?(String) || v.is_a?(Symbol)
+      return v.to_s if v.is_a?(Boolean) || v.is_a?(Numeric)
+      raise "Cannot convert serialize ruby value to lua string #{v.inspect}"
+    end
+
+    def escape_lua_string(str)
+      escapes = { "\a" => "\\a", "\b" => "\\b", "\f" =>"\\f",
+          "\n" => "\\n", "\r" => "\\r", "\v" => "\\v", "\"" => "\\\"", "\'" => "\\'", "[" => "\[", "]" => "\]"}
+      "\"" + str.split("").map{|c| escapes[c] || c}.join("") + "\""
+    end 
+
+
     def run_lua_function(name, *params)
       #STDERR << "Running #{name}(" + params.join(',') + ")"
       run_lua do |s|
-        s.function "host.get_run_param" do |ix|
-          params[ix]
-        end
-        params_list = (0..params.length).map{|ix| "host.get_run_param(#{ix})"}.join(",")
+        params_list = params.map{|v| to_lua_str(v)}.join(",")
         source = %{names = {}
                   names.invoke_lua_xpcall = function() 
                     inner_xpcall_target = function() 
                       return } + "#{name}(#{params_list})" + %{
                     end 
-                    local err = function(e) return e ..'\\n'..debug.traceback() end
+                    local err = function(e) return e..debug.traceback() end
                     local flag, result = xpcall(inner_xpcall_target,err)
                     if flag then
                       return result
