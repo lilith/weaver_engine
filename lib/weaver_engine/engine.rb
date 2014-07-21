@@ -105,6 +105,9 @@ module WeaverEngine
       run_lua_function("push", @user_id, mod_id, method_name)
     end
 
+    def get_utils_code()
+      File.read(File.expand_path('../lua_engine/utils.lua', File.dirname(__FILE__)))
+    end
     def get_sandbox_code()
       File.read(File.expand_path('../lua_engine/sandbox.lua', File.dirname(__FILE__)))
     end
@@ -165,6 +168,7 @@ module WeaverEngine
       s.function "host.stderr" do |message|
         $stderr.puts message
       end
+      s.eval(get_utils_code(), nil, 'utils.lua', 0)
       s.eval(get_sandbox_code(), nil, 'sandbox.lua', 0)
       block.call(s)
       s.close
