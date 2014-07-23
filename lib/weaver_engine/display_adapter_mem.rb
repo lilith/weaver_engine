@@ -4,21 +4,28 @@ module WeaverEngine
     
     def initialize(data_adapter)
       @data_adapter = data_adapter
+      set_state(nil)
     end
 
-
-    def set_state(data)
-      @data = data || {}
+    def ensure_data
+      @data ||= {}
       @data[:stats] ||= {}
       @data[:prose] ||= []
-      @data[:choices] ||= {}
+      @data[:choices] ||= []
+    end
+
+    def set_state(data)
+      @data = data
+      ensure_data
       @data[:status] = 200
     end
+
     def get_state
       Marshal.load(Marshal.dump(@data))
     end
 
     def stats
+      ensure_data
       @data[:stats]
     end
 
@@ -55,6 +62,7 @@ module WeaverEngine
     end
 
     def render()
+      add_choice("continue", "Continue") if @data[:choices].empty?
       @data
     end
 
@@ -62,11 +70,7 @@ module WeaverEngine
       @data[:prose] = error.all_info
       @data[:choices] = checkpoints.map{|c| {id: c[:key], label: c[:title]}} #todo add time ago.
       @data[:status] = 500
-      estr = error.all_info.join("\n")
-      estr.gsub!(/\[string "([^"\]]+?)(:0)?"\]/, "\\1")
-      estr.gsub!(/\n\s*\/invoke_lua_xpcall:\d: in function <\/invoke_lua_xpcall:\d>\n*/,"\n")
-      @data[:error] = estr
- 
+      @data[:error] = error.all_info.join("\n")
     end
 
     def print(var_table, template = nil)

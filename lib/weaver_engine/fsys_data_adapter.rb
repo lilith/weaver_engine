@@ -11,7 +11,7 @@ module WeaverEngine
 
  
     def get_mod_blob(mod_id)
-      File.binread(File.join(@module_dir, mod_id, ".lua"))
+      File.read(File.join(@module_dir, "#{mod_id}.lua"))
     end
 
 
@@ -101,8 +101,8 @@ module WeaverEngine
     # transaction sources [(user,amount,currency)] destinations [(user,amount,currency)]
     # For ajax, we eventually would want to diff the tree, i.e compare current against saved.
     def add_to_state(state,prefix)
-      add_methods_to_state state, prefix, [:update_stat, :set_stats, :newpage, 
-      :print, :translate, :debuglog, :add_choice, :set_choices]
+      add_methods_to_state state, prefix, [:get_mod_blob, :get_value_by, :set_value_by, 
+      :flowstack_push, :flowstack_pop, :flowstack_peek]
     end
 
   end
