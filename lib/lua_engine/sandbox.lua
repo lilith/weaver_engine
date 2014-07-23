@@ -152,8 +152,9 @@ function build_coroutine(user_id, mod_id, method_name, err)
   local mod = sandbox.load_with_env(mod_source,mod_id, env,err)
   if (mod == nil) then return nil end
   
+  local err2 = function(e) return e.."\n"..debug.traceback() end
   -- Execute the module to populate the environment
-  local status, result =  pcall(mod)
+  local status, result =  xpcall(mod,err2)
   if not status then
     err("Error evaluating module '" .. mod_id .. "'\n"..result)
     return nil
@@ -241,9 +242,9 @@ end
 
 sandbox.create_require = function(modulename, env)
   return function(modulename)
-    local mod_source = host.get_mod_blob(mod_id) -- TODO - make this return an array of module parts.
+    local mod_source = host.get_mod_blob(modulename) -- TODO - make this return an array of module parts.
     if mod_source == nil then
-      error("Failed to locate module " .. modulename)
+      error("Failed to locate module '" .. modulename .."'")
     end
     local mod_loaded, message = loadstring(mod_source)
     if (mod_loaded == nil) then
