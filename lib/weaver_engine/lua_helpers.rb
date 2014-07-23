@@ -27,11 +27,12 @@ module WeaverEngine
           result = nil
           begin
             args = lua_to_ruby(args)
+            signature = "#{name}(#{args.map{|v|v.inspect}.join(',')})"
             result = self.send(name,*args)
           rescue Exception => e 
             STDERR << "\nError calling C(Ruby) function #{signature}:\n #{e}\n"
           else
-            #STDERR << "\n#{prefix}#{signature}) invoked, returned #{result.inspect[0..30]}...\n"
+            #STDERR << "\n#{prefix}#{signature} invoked, returned #{result.inspect[0..30]}...\n"
           end
           result
         end
