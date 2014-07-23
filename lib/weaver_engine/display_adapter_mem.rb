@@ -58,7 +58,7 @@ module WeaverEngine
     end
 
     def set_choices(choices)
-      @data[:choices] = choices
+      @data[:choices] = choices.map{|c| c.inject({}){|memo,(k,v)| memo[k.to_sym] = v; memo}}
     end
 
     def render()
