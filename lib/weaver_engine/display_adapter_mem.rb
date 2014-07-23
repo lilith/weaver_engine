@@ -53,17 +53,36 @@ module WeaverEngine
       #Will add the given input element to the form. 
     end
 
-    def add_choice(id, label)
-      choices.push({id:id, label:label})
+    def add_choice(id, label=nil)
+      choices.push({id:id, label: (label || id)})
     end
 
     def set_choices(choices)
       @data[:choices] = choices.map{|c| c.inject({}){|memo,(k,v)| memo[k.to_sym] = v; memo}}
     end
 
+    def get_choices
+      @data[:choices] || []
+    end
+
+    def safe_hex_digest(str)
+      "h" + Digest::SHA256.new.hexdigest(str)[0..12]
+    end
+
     def render()
-      add_choice("continue", "Continue") if @data[:choices].empty?
+      raise "No choices provided by game" if @data[:choices].empty?
+      choices.each do |c|
+        c[:safe_id] = safe_hex_digest(c[:id])
+      end
       @data
+    end
+
+    def filter_input(input)
+      return nil if input.nil?
+      by_id = Hash[choices.map{|c| [safe_hex_digest(c[:id]), c]}]
+
+      key = input.keys.find{|k| by_id[k]}
+      return by_id[key]
     end
 
     def error(error,checkpoints)
@@ -94,7 +113,7 @@ module WeaverEngine
     # For ajax, we eventually would want to diff the tree, i.e compare current against saved.
     def add_to_state(state,prefix)
       add_methods_to_state state, prefix, [:update_stat, :set_stats, :newpage, 
-      :print, :translate, :debuglog, :add_choice, :set_choices]
+      :print, :translate, :debuglog, :get_choices, :add_choice, :set_choices]
     end
 
     

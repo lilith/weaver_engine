@@ -8,12 +8,14 @@ module WeaverEngine
       @modules["newbie"] = %{
         function init()
             p[[Hello]]
-            coroutine.yield({status='prompt'})
+            add_choice("continue","Continue")
+            wait()
             room()
         end
         function room()
           p[[You are in a room]]
-          coroutine.yield({status='prompt'})
+          add_choice("continue","Continue")
+          wait()
           init()
         end
       }
@@ -21,13 +23,15 @@ module WeaverEngine
         function init()
           newpage()
           p[[Init Room]]
-          coroutine.yield({status='prompt'})
+          add_choice("continue","Continue")
+          wait()
           goto("gotos", "room2")
         end
         function room2()
           newpage()
           p[[Room2]]
-          coroutine.yield({status='prompt'})
+          add_choice("continue","Continue")
+          wait()
           goto("gotos", "init")
         end
       }
@@ -59,7 +63,7 @@ module WeaverEngine
 
     it 'can resume' do
       response = @engine.request
-      response = @engine.request({})
+      response = @engine.request({response[:choices][0][:safe_id] => true})
       assert_equal ["Hello", "You are in a room"], response[:prose], response[:error]
       @engine = nil
     end

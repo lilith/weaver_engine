@@ -79,10 +79,10 @@ module WeaverEngine
             raise LuaEngineError.new("empty_stack",["Something bad happened"])
           else
             restore_checkpoint("init")
-            resume(nil)
+            run_lua_function("resume", @user_id, nil)
           end
         elsif input != nil
-          resume(input)
+          run_lua_function("resume", @user_id, display.filter_input(input))
         end
       rescue LuaEngineError => e 
         display.error(e, list_checkpoints)
@@ -92,9 +92,6 @@ module WeaverEngine
       display.render
     end
 
-    def resume(input)
-      run_lua_function("resume", @user_id, input)
-    end
 
     #function push(user_id, mod_id, method_name)
     #{success=true} - pushed to stack

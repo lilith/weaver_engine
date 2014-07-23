@@ -322,9 +322,18 @@ sandbox.build_environment = function(user_id, mod_id)
   env.m.exit_module = function()
     sandbox.env.coroutine.yield({status='donehere'})
   end
+
+    env.add_choice = host.add_choice
+  env.set_choices = host.set_choices
+  env.get_choices = host.get_choices
+  env.debuglog = host.stderr
   
   env.wait = function()
-    sandbox.env.coroutine.yield({status='prompt'})
+    --host.stderr(table.show(env.get_choices()))
+    if table.isempty(env.get_choices()) then
+      error("You must provide the user with one or more choices before waiting")
+    end
+    return sandbox.env.coroutine.yield({status='prompt'})
   end
   env.goto = function(moduleid, methodname)
     coroutine.yield({status="goto", mod_id = moduleid, method_name = methodname})
@@ -333,8 +342,6 @@ sandbox.build_environment = function(user_id, mod_id)
     coroutine.yield({status="call", mod_id = moduleid, method_name = methodname})
   end
 
-  env.add_choice = host.add_choice
-  env.set_choices = host.set_choices
 
 
   local err = function(msg)
