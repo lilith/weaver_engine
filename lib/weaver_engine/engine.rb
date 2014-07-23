@@ -124,10 +124,11 @@ module WeaverEngine
       #STDERR << "Running #{name}(" + params.join(',') + ")"
       run_lua do |s|
         params_list = params.map{|v| to_lua_str(v)}.join(",")
+        call = "#{name}(#{params_list})"
         source = %{names = {}
                   names.invoke_lua_xpcall = function() 
                     inner_xpcall_target = function() 
-                      return } + "#{name}(#{params_list})" + %{
+                      return } + call + %{
                     end 
                     local err = function(e) return e..debug.traceback() end
                     local flag, result = xpcall(inner_xpcall_target,err)
@@ -139,7 +140,12 @@ module WeaverEngine
                   end
                   return names.invoke_lua_xpcall()
                 }
-        result = s.eval(source, nil, "/invoke_lua_xpcall", 0)
+        result = nil
+        begin 
+          result = s.eval(source, nil, "/invoke_lua_xpcall", 0)
+        rescue Rufus::Lua::LuaError => e
+          raise $!, "Lua error xpcall wrapping [#{call}]\n #{$!}", $!.backtrace
+        end
         raise LuaEngineError.new("host_runtime_error", ["nil result from #{name}"]) if result.nil?
         raise LuaEngineError.new(result["reason"], result["log"]) unless result.nil? || result["success"]
         result

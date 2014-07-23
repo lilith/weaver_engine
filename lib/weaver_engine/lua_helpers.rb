@@ -43,24 +43,25 @@ module WeaverEngine
       return "nil" if v.nil?
       return escape_lua_string(v.to_s) if v.is_a?(String) || v.is_a?(Symbol)
       return v.to_s if !!v == v || v.is_a?(Numeric)
-      v = Hash[v.each_with_index.map { |v, ix| [ix, v] }] if v.is_a?(Array) 
+      v = Hash[v.each_with_index.map { |v, ix| [ix + 1, v] }] if v.is_a?(Array) 
       if v.is_a?(Hash)
-        result = "{"
+        pairs = []
         v.each do |k,v|
-          k = to_lua_str(k) if (k.is_a?(String) || k.is_a?(Symbol))
+          k = "[#{to_lua_str(k)}]" if (k.is_a?(String) || k.is_a?(Symbol))
           k = "nil" if k.nil?
           k = "[#{k.to_s}]" if  !!k == k || k.is_a?(Numeric)
-          raise "Invalid table key #{k.inspect}" unless k.is_a(String)
-          result += "#{k} = #{to_lua_str(v)}, "
+          raise "Invalid table key #{k.inspect}" unless k.is_a?(String)
+          pairs << "#{k} = #{to_lua_str(v)}"
         end
-        return result + "}"
+        return "{#{pairs.join(', ')}}"
       end 
       raise "Cannot serialize ruby value to lua syntax #{v.inspect}"
     end
 
     def escape_lua_string(str)
-      escapes = { "\a" => "\\a", "\b" => "\\b", "\f" =>"\\f",
-          "\n" => "\\n", "\r" => "\\r", "\v" => "\\v", "\"" => "\\\"", "\'" => "\\'", "[" => "\[", "]" => "\]"}
+      escapes = { "\\" => '\\\\',
+         "\a" => '\a', "\b" => '\b', "\f" =>'\f', "\t" => '\t',
+          "\n" => '\n', "\r" => '\r', '\v' => '\v', '"' => '\"', '\'' => '\\\'', '[' => '\[', ']' => '\]'}
       "\"" + str.split("").map{|c| escapes[c] || c}.join("") + "\""
     end 
   end
