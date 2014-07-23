@@ -196,7 +196,7 @@ sandbox.env = {
       rep = string.rep, reverse = string.reverse, sub = string.sub, 
       upper = string.upper },
   table = { insert = table.insert, maxn = table.maxn, remove = table.remove, 
-      sort = table.sort, show = table.show},
+      sort = table.sort, show = table.show, isempty = table.isempty},
   math = { abs = math.abs, acos = math.acos, asin = math.asin, 
       atan = math.atan, atan2 = math.atan2, ceil = math.ceil, cos = math.cos, 
       cosh = math.cosh, deg = math.deg, exp = math.exp, floor = math.floor, 
@@ -241,7 +241,7 @@ end
 
 sandbox.create_require = function(modulename, env)
   return function(modulename)
-    local mod_source = host.get_mod_blob(mod_id)
+    local mod_source = host.get_mod_blob(mod_id) -- TODO - make this return an array of module parts.
     if mod_source == nil then
       error("Failed to locate module " .. modulename)
     end
@@ -266,14 +266,6 @@ sandbox.load_with_env = function(luacode, chunkname, env, error_callback)
   return func
 end
 
-local comment = [[sandbox.env.back_to_caller = function()
-  sandbox.env.coroutine.yield({status='donehere'})
-end
-
-sandbox.env.await_user = function()
-  sandbox.env.coroutine.yield({status='prompt'})
-end
-]]
 
 -- update_stat(k,v) set_stats(stats) 
 -- newpage() print(tab, template) translate(str)
@@ -317,20 +309,32 @@ end
 sandbox.build_environment = function(user_id, mod_id)
   local env =  deepcopy(sandbox.env)
   env["_G"] = env  
-  env.m = {}
-  env.m.initial_method = method_name
-  env.m.info = {}
+  env.m = sandbox.create_m(user_id,mod_id)
   env.m.info.id = mod_id
+  env.stats = sandbox.create_stats(user_id)
 
+  env.require = sandbox.create_require(env)
   env.p = host.print
+  env.newpage = host.newpage
+  env.checkpoint = host.checkpoint
+
+  env.m.exit_module = function()
+    sandbox.env.coroutine.yield({status='donehere'})
+  end
+  
+  env.wait = function()
+    sandbox.env.coroutine.yield({status='prompt'})
+  end
   env.goto = function(moduleid, methodname)
     coroutine.yield({status="goto", mod_id = moduleid, method_name = methodname})
   end
-  env.newpage = host.newpage
-  env.checkpoint = host.checkpoint
-  env.m = sandbox.create_m(user_id,mod_id)
-  env.stats = sandbox.create_stats(user_id)
-  env.require = sandbox.create_require(env)
+  env.call = function(moduleid, methodname)
+    coroutine.yield({status="call", mod_id = moduleid, method_name = methodname})
+  end
+
+  env.add_choice = host.add_choice
+  env.set_choices = host.set_choices
+
 
   local err = function(msg)
     error(msg)

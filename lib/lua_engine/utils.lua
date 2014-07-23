@@ -63,6 +63,9 @@ function table.invert(tab)
   return t
 end
 
+function table.isempty(tab)
+  return next(tab) == nil
+end
 
 
 function table.concat(t1,t2)
