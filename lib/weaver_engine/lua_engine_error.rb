@@ -23,8 +23,14 @@ module WeaverEngine
       }[reason.to_s.downcase.to_sym]
     end
 
+    def clean_stacktrace(trace)
+      trace.map do |str|
+        str.gsub(/\[string "([^"\]]+?)(:0)?"\]/, "\\1").gsub(/\n*\s*invoke_lua_xpcall.lua:\d: in function <invoke_lua_xpcall.lua:\d>\n*/,"\n")
+      end 
+    end
+
     def all_info
-      ["#{reason} - #{explanation}"] + DataAdapterBase.lua_to_ruby(log || [])
+      ["#{reason} - #{explanation}"] + clean_stacktrace(DataAdapterBase.lua_to_ruby(log || []))
     end
   end
 end

@@ -130,7 +130,7 @@ module WeaverEngine
                     inner_xpcall_target = function() 
                       return } + call + %{
                     end 
-                    local err = function(e) return e..debug.traceback() end
+                    local err = function(e) return e.."\\n"..debug.traceback() end
                     local flag, result = xpcall(inner_xpcall_target,err)
                     if flag then
                       return result
@@ -142,7 +142,7 @@ module WeaverEngine
                 }
         result = nil
         begin 
-          result = s.eval(source, nil, "/invoke_lua_xpcall", 0)
+          result = s.eval(source, nil, "invoke_lua_xpcall.lua", 0)
         rescue Rufus::Lua::LuaError => e
           raise $!, "Lua error xpcall wrapping [#{call}]\n #{$!}", $!.backtrace
         end

@@ -141,7 +141,7 @@ function build_coroutine(user_id, mod_id, method_name, err)
   -- Access the module source
   local mod_source = host.get_mod_blob(mod_id)
   if (mod_source == nil) then
-    err ("Couldn't find module " .. mod_id)
+    err ("Couldn't find module '" .. mod_id.."'")
     return nil
   end
 
@@ -155,14 +155,14 @@ function build_coroutine(user_id, mod_id, method_name, err)
   -- Execute the module to populate the environment
   local status, result =  pcall(mod)
   if not status then
-    err("Error evaluating module " .. mod_id .. "\n"..result)
+    err("Error evaluating module '" .. mod_id .. "'\n"..result)
     return nil
   end
 
   -- Look up the function from 'name'
   local initial_func = env[method_name]
   if (initial_func == nil) then
-    err("Couldn't find function " .. method_name .. " in module " .. mod_id)
+    err("Couldn't find function '" .. method_name .. "'' in module '" .. mod_id.."'")
     return nil
   end
 
@@ -181,6 +181,8 @@ sandbox.env = {
   pcall = pcall,
   tonumber = tonumber,
   tostring = tostring,
+  error = error,
+  assert = assert,
   type = type,
   print = print,
   unpack = unpack,

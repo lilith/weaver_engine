@@ -32,6 +32,7 @@ module WeaverEngine
         end
       }
       @modules["badsyntax"] = "[["
+      @modules["runtimerror"] = "function init() error(\"fail\") end"
       @data = MemDataAdapter.new(@user_id,@branch_id, @modules)
       @display = MemDisplayAdapter.new(@data)
 
@@ -79,6 +80,14 @@ module WeaverEngine
       response = @engine.request
       assert response[:error].include?("badsyntax:1: unfinished long string near '<eof>'"), response[:error]
     end
+
+    it 'has detailed runtime errors' do
+      @engine.init_module_id = "runtimerror"
+      response = @engine.request
+      assert !response[:error].include?("xpcall"), response[:error]
+      assert  response[:error].include?("runtimerror:1: fail"), response[:error]
+    end
+
   end
 
 
